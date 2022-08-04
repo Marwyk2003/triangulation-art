@@ -1,39 +1,41 @@
+from __future__ import annotations
 import numpy as np
+import numpy.typing as npt
 import matplotlib.pyplot as plt
 
 
-def dot(a, b):
+def dot(a: float, b: float) -> float:
     return a.x*b.x+a.y*b.y
 
 
-def cross(a, b):
+def cross(a: float, b: float) -> float:
     return a.x*b.y-a.y*b.x
 
 
 class Point:
-    def __init__(self, x, y):
+    def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
 
     def __repr__(self):
         return f'({self.x}, {self.y})'
 
-    def __add__(self, p):
+    def __add__(self, p: Point):
         return Point(self.x+p.x, self.y+p.y)
 
-    def __sub__(self, p):
+    def __sub__(self, p: Point):
         return Point(self.x-p.x, self.y-p.y)
 
-    def __mul__(self, c):
+    def __mul__(self, c: float):
         return Point(self.x*c, self.y*c)
 
-    def __truediv__(self, c):
+    def __truediv__(self, c: float):
         return Point(self.x/c, self.y/c)
 
-    def __eq__(self, p):
+    def __eq__(self, p: Point):
         return self.x == p.x and self.y == p.y
 
-    def __lt__(self, p):
+    def __lt__(self, p: Point):
         if self.x == p.x:
             return self.y < p.y
         return self.x < p.x
@@ -43,16 +45,16 @@ class Point:
 
 
 class Triangle:
-    def __init__(self, v):
+    def __init__(self, v: list[Point]):
         assert len(v) == 3
         self._v = v
 
     @property
-    def v(self):
-        return sorted(list(self._v))
+    def v(self) -> list[Point]:
+        return sorted(self._v)
 
     @property
-    def circum_circle(self):
+    def circum_circle(self) -> (Point, float):
         # A = (0, 0)
         V = self.v
         B = V[1]-V[0]
@@ -65,10 +67,10 @@ class Triangle:
         return U+V[0], r
 
     @property
-    def edges(self):
-        return (Edge([self.v[0], self.v[1]]), Edge([self.v[1], self.v[2]]), Edge([self.v[2], self.v[0]]))
+    def edges(self) -> list[Edge]:
+        return [Edge([self.v[0], self.v[1]]), Edge([self.v[1], self.v[2]]), Edge([self.v[2], self.v[0]])]
 
-    def in_cc(self, p):
+    def in_cc(self, p: Point) -> bool:
         u, r = self.circum_circle
         return dot(u-p, u-p) <= r**2
 
@@ -83,7 +85,7 @@ class Triangle:
 
 
 class Edge:
-    def __init__(self, v):
+    def __init__(self, v: list[Point]):
         assert len(v) == 2
         self.a, self.b = sorted(v)
 
@@ -97,7 +99,7 @@ class Edge:
         return hash((self.a, self.b))
 
 
-def BowyerWatson(points_arr, border=True):
+def BowyerWatson(points_arr: npt.ArrayLike, border: bool = True) -> list[Triangle]:
     points = list(map(lambda cords: Point(*cords), points_arr))
     min_x, min_y = min(unique[:, 0])-1, min(unique[:, 1])-1
     max_x, max_y = max(unique[:, 0])+1, max(unique[:, 1])+1
@@ -107,7 +109,7 @@ def BowyerWatson(points_arr, border=True):
     triangulation = set(super_t)
     for p in points:
         bad_t = set()
-        bad_e = {}  # edge -> no occurences
+        bad_e = {}  # edge hash -> no occurences
         for t in triangulation:
             if t.in_cc(p):
                 bad_t.add(t)
@@ -122,16 +124,16 @@ def BowyerWatson(points_arr, border=True):
         for t in bad_t:
             triangulation.remove(t)
         for e in polygon:
-            new_t = Triangle({e.a, e.b, p})
+            new_t = Triangle([e.a, e.b, p])
             triangulation.add(new_t)
     if not border:
         for t in set(triangulation):
             if len(set(t.v) & set(super_p)) > 0:
                 triangulation.remove(t)
-    return triangulation
+    return list(triangulation)
 
 
-def plot(X, triangulation):
+def plot(X: npt.ArrayLike, triangulation: list[Triangle]):
     fig, ax = plt.subplots()
     Xt = []
     colors = np.random.rand(len(triangulation), 3)
