@@ -15,6 +15,9 @@ class Point:
         self.x = x
         self.y = y
 
+    def __repr__(self):
+        return f'({self.x}, {self.y})'
+
     def __add__(self, p):
         return Point(self.x+p.x, self.y+p.y)
 
@@ -26,9 +29,6 @@ class Point:
 
     def __truediv__(self, c):
         return Point(self.x/c, self.y/c)
-
-    def __repr__(self):
-        return f'({self.x}, {self.y})'
 
     def __eq__(self, p):
         return self.x == p.x and self.y == p.y
@@ -87,58 +87,52 @@ class Edge:
         assert len(v) == 2
         self.a, self.b = sorted(v)
 
+    def __repr__(self):
+        return str((self.a, self.b))
+
     def __eq__(self, e):
         return self.a == e.a and self.b == e.b
 
     def __hash__(self):
         return hash((self.a, self.b))
 
-    def __repr__(self):
-        return str((self.a, self.b))
 
-
-def BowyerWatson(points):
-    super_t = Triangle(
-        {Point(-1000, -1000), Point(1000, -1000), Point(0, 1000)})
-    triangulation = [super_t]
-    history = []
-    history += [triangulation.copy()]
+def BowyerWatson(points_arr, border=True):
+    points = list(map(lambda cords: Point(*cords), points_arr))
+    min_x, min_y = min(unique[:, 0])-1, min(unique[:, 1])-1
+    max_x, max_y = max(unique[:, 0])+1, max(unique[:, 1])+1
+    super_p = [Point(min_x, max_y), Point(max_x, max_y),
+               Point(min_x, min_y), Point(max_x, min_y)]
+    super_t = [Triangle(super_p[:3]), Triangle(super_p[1:])]
+    triangulation = set(super_t)
     for p in points:
         bad_t = set()
+        bad_e = {}  # edge -> no occurences
         for t in triangulation:
             if t.in_cc(p):
                 bad_t.add(t)
+                for e in t.edges:
+                    bad_e[e] = bad_e.get(e, 0) + 1
         polygon = set()
         for t in bad_t:
             for e in t.edges:
-                shared = False
-                for t1 in bad_t:
-                    if t == t1:
-                        continue
-                    for e1 in t1.edges:
-                        if e == e1:
-                            shared = True
-                            break
-                if not shared:
+                assert e in bad_e
+                if bad_e[e] == 1:
                     polygon.add(e)
         for t in bad_t:
             triangulation.remove(t)
         for e in polygon:
             new_t = Triangle({e.a, e.b, p})
-            triangulation += [new_t]
-        history += [triangulation.copy()]
-    for t in set(triangulation):
-        if len(set(t.v) & set(super_t.v)) > 0:
-            triangulation.remove(t)
-    return triangulation, history
+            triangulation.add(new_t)
+    if not border:
+        for t in set(triangulation):
+            if len(set(t.v) & set(super_p)) > 0:
+                triangulation.remove(t)
+    return triangulation
 
 
-def plot(points, triangulation):
-    X = np.array(list(map(lambda p: [p.x, p.y], points)))
+def plot(X, triangulation):
     fig, ax = plt.subplots()
-    ax.set_xlim([-10, 10])
-    ax.set_ylim([-10, 10])
-
     Xt = []
     colors = np.random.rand(len(triangulation), 3)
     for i, t in enumerate(triangulation):
@@ -151,9 +145,8 @@ def plot(points, triangulation):
 
 if __name__ == '__main__':
     N = 100
-    random = np.random.randint(-100, 10, (N, 2))
+    MIN, MAX = -1000, 1000
+    random = np.random.randint(MIN, MAX, (N, 2))
     unique = np.unique(random, axis=0)
-    points = list(map(lambda cords: Point(*cords), unique)
-                  )
-    triangulation, history = BowyerWatson(points)
-    plot(points, triangulation)
+    triangulation = BowyerWatson(unique)
+    plot(unique, triangulation)
