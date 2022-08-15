@@ -1,7 +1,6 @@
 from __future__ import annotations
 import numpy as np
 import numpy.typing as npt
-import matplotlib.pyplot as plt
 
 
 def dot(a: float, b: float) -> float:
@@ -13,9 +12,10 @@ def cross(a: float, b: float) -> float:
 
 
 class Point:
-    def __init__(self, x: float, y: float):
+    def __init__(self, x: float, y: float, c=[150, 150, 150]):
         self.x = x
         self.y = y
+        self.c = c
 
     def __repr__(self):
         return f'({self.x}, {self.y})'
@@ -45,16 +45,21 @@ class Point:
 
 
 class Triangle:
-    def __init__(self, v: list[Point]):
+    def __init__(self, v: list[Point], color=[150, 150, 150]):
         assert len(v) == 3
         self._v = v
+
+    @property
+    def color(self) -> Array[int]:
+        v = self.v
+        return [((v[0].c[x]**2+v[1].c[x]**2+v[2].c[x]**2)/3)**0.5/255 for x in range(3)]
 
     @property
     def v(self) -> list[Point]:
         return sorted(self._v)
 
     @property
-    def circum_circle(self) -> (Point, float):
+    def circum_circle(self) -> Tuple[Point, float]:
         # A = (0, 0)
         V = self.v
         B = V[1]-V[0]
@@ -100,9 +105,10 @@ class Edge:
 
 
 def BowyerWatson(points_arr: npt.ArrayLike, border: bool = True) -> list[Triangle]:
-    points = list(map(lambda cords: Point(*cords), points_arr))
-    min_x, min_y = min(unique[:, 0])-1, min(unique[:, 1])-1
-    max_x, max_y = max(unique[:, 0])+1, max(unique[:, 1])+1
+    points = list(map(lambda cords: Point(
+        cords[0], cords[1], cords[2:]), points_arr))
+    min_x, min_y = min(points_arr[:, 0])-1, min(points_arr[:, 1])-1
+    max_x, max_y = max(points_arr[:, 0])+1, max(points_arr[:, 1])+1
     super_p = [Point(min_x, max_y), Point(max_x, max_y),
                Point(min_x, min_y), Point(max_x, min_y)]
     super_t = [Triangle(super_p[:3]), Triangle(super_p[1:])]
@@ -133,22 +139,10 @@ def BowyerWatson(points_arr: npt.ArrayLike, border: bool = True) -> list[Triangl
     return list(triangulation)
 
 
-def plot(X: npt.ArrayLike, triangulation: list[Triangle]):
-    fig, ax = plt.subplots()
-    Xt = []
-    colors = np.random.rand(len(triangulation), 3)
-    for i, t in enumerate(triangulation):
-        cords = np.array([[t.v[j].x, t.v[j].y] for j in range(3)])
-        t1 = plt.Polygon(cords, ec='black', fc=colors[i])
-        ax.add_patch(t1)
-    plt.scatter(X[:, 0], X[:, 1], s=25)
-    plt.show()
-
-
 if __name__ == '__main__':
     N = 100
     MIN, MAX = -1000, 1000
     random = np.random.randint(MIN, MAX, (N, 2))
     unique = np.unique(random, axis=0)
     triangulation = BowyerWatson(unique)
-    plot(unique, triangulation)
+    print(triangulation)
